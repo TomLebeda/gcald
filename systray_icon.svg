@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="22.529173mm"
+   height="21.529078mm"
+   viewBox="0 0 22.529174 21.529077"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   sodipodi:docname="calendar_icon_square_light.svg"
+   inkscape:export-filename="systray_icon.png"
+   inkscape:export-xdpi="541.587"
+   inkscape:export-ydpi="541.587"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="9.7619611"
+     inkscape:cx="31.602257"
+     inkscape:cy="43.12658"
+     inkscape:window-width="1920"
+     inkscape:window-height="1080"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid132"
+       originx="-80.735455"
+       originy="-57.735415" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-80.73541,-57.735417)">
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:#dfdfdf;stroke-width:1.85208333;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 80.999952,67.000004 22.000008,-5e-6"
+       id="path1322"
+       sodipodi:nodetypes="cc" />
+    <rect
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208333;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       id="rect455"
+       width="22.000006"
+       height="18.99999"
+       x="80.999992"
+       y="60.000004"
+       ry="1.974268"
+       inkscape:export-filename="./systray_icon.png"
+       inkscape:export-xdpi="541.587"
+       inkscape:export-ydpi="541.587" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 86.999955,63.000002 v 0 -5"
+       id="path1213" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 96.999955,63.000002 v 0 -5"
+       id="path1215" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 84.999955,71.000002 h 2"
+       id="path1217" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 90.999955,71.000002 v 0 h 2"
+       id="path1219" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 96.999955,71.000002 v 0 h 2"
+       id="path1221" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 84.999955,75.000002 h 2"
+       id="path1223" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 90.999955,75.000002 v 0 h 2"
+       id="path1225" />
+    <path
+       style="fill:none;stroke:#dfdfdf;stroke-width:1.85208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0.5;stroke-dasharray:none;stroke-opacity:1"
+       d="m 96.999955,75.000002 v 0 h 2"
+       id="path1227" />
+  </g>
+</svg>
