@@ -294,7 +294,7 @@ func updateTooltip(event *MyEvent) {
 			event.Start.Local().Month(),
 		)
 	} else {
-		msg = fmt.Sprintf("on %d.%d. at %d:%d",
+		msg = fmt.Sprintf("on %d.%d. at %02d:%02d",
 			event.Start.Local().Day(),
 			event.Start.Local().Month(),
 			event.Start.Local().Hour(),
@@ -321,7 +321,7 @@ func notify(alarm *MyAlarm) {
 			alarm.Event.Start.Local().Month(),
 			formatApproxDuration(time.Until(alarm.Event.Start)))
 	} else {
-		msg = fmt.Sprintf("on %d.%d. at %d:%d\nremaining time: %s",
+		msg = fmt.Sprintf("on %d.%d. at %02d:%02d\nremaining time: %s",
 			alarm.Event.Start.Local().Day(),
 			alarm.Event.Start.Local().Month(),
 			alarm.Event.Start.Local().Hour(),
