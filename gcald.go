@@ -22,9 +22,10 @@ import (
 )
 
 type MyCalendar struct {
-	Title  string
-	Url    string
-	Events map[string]*MyEvent
+	Title     string
+	Url       string
+	Events    map[string]*MyEvent
+	ClientCmd string
 }
 
 type MyEvent struct {
@@ -47,6 +48,7 @@ type CalendarMetaData struct {
 	Url                  string   `json:"url"`
 	Notifications        []string `json:"notification_offsets"`
 	FullDayNotifications []string `json:"full_day_notifications_offsets"`
+	OpenClientCmd        string   `json:"open_client_cmd"`
 	Calendar             *ical.Calendar
 }
 
@@ -54,7 +56,6 @@ type Config struct {
 	FetchPeriodRaw        string             `json:"fetch_period"`
 	ForceDefaultReminders bool               `json:"force_default_reminders"`
 	CalendarsMetaData     []CalendarMetaData `json:"calendars"`
-	OpenClientCmd         string             `json:"open_client_cmd"`
 	FetchPeriod           time.Duration
 	ForceCheckPeriod      time.Duration
 }
@@ -69,24 +70,27 @@ var (
 
 var (
 	configFileName = "gcald_import.json"
+	dataFolderPath = "./data"
 )
 
 var interruptCh = make(chan struct{})
+var sysReady = make(chan bool)
 
 func main() {
-	flag.StringVar(&configFileName, "i", "gcald_import.json", "path to the json file with input data")
+	flag.StringVar(&dataFolderPath, "i", "data/", "path to the folder where gcald_import.json and icons are located. Default is ./data/")
 	flag.BoolVar(&log.Tracing, "v", false, "verbose output")
 	flag.Parse()
 	log.Trace("started")
 
-	go systray.Run(onReady, onExit)
-	log.Trace("systray setup finished")
+	importFile(dataFolderPath + configFileName)
 
 	var nearestAlarm *MyAlarm
 	var nearestEvent *MyEvent
 	forceFetch := false
-	importFile(configFileName)
 	fetch()
+
+	go systray.Run(onReady, onExit)
+	updateMenuButtons()
 	for {
 		if time.Now().YearDay() != cacheDay {
 			cache = make(map[string]struct{})
@@ -96,10 +100,14 @@ func main() {
 		if time.Since(lastFetch) >= config.FetchPeriod || forceFetch {
 			fetch()
 		}
+
 		nearestAlarm, nearestEvent = check(cals)
+		log.Debug("nearest alarm: ", nearestAlarm.Trigger.Format(time.StampMilli))
+		log.Debug("sleep time:", time.Until(nearestAlarm.Trigger))
 		updateTooltip(nearestEvent)
 		select {
 		case <-time.After(time.Until(nearestAlarm.Trigger)):
+			log.Trace("waking up for nearest alarm")
 			notify(nearestAlarm)
 			break
 		case <-time.After(config.FetchPeriod - time.Since(lastFetch)):
@@ -116,9 +124,9 @@ func onReady() {
 	var icon []byte
 	var err error
 	if runtime.GOOS == "windows" {
-		icon, err = os.ReadFile("systray_icon.ico")
+		icon, err = os.ReadFile(dataFolderPath + "systray_icon.ico")
 	} else {
-		icon, err = os.ReadFile("systray_icon.png")
+		icon, err = os.ReadFile(dataFolderPath + "systray_icon.png")
 	}
 	if err != nil {
 		log.Fatalf("failed to load systray icon: %s", err.Error())
@@ -127,34 +135,6 @@ func onReady() {
 		log.Trace("systray icon loaded")
 	}
 	systray.SetTitle("gcald")
-	mReload := systray.AddMenuItem("Reload config", "Reloads the config file from disk.")
-	mFetch := systray.AddMenuItem("Fetch now", "Fetches data from internet.")
-	mOpen := systray.AddMenuItem("Open client", "Opens calendar in default browser.")
-	mQuit := systray.AddMenuItem("Quit", "Quit program.")
-	log.Trace("menu icons loaded")
-
-	go func() {
-		for range mReload.ClickedCh {
-			importFile(configFileName)
-		}
-	}()
-	go func() {
-		for range mOpen.ClickedCh {
-			log.Trace("opening client")
-			_ = exec.Command(strings.Split(config.OpenClientCmd, " ")[0], strings.Split(config.OpenClientCmd, " ")[1:]...).Run()
-		}
-	}()
-	go func() {
-		for range mFetch.ClickedCh {
-			interruptCh <- struct{}{}
-		}
-	}()
-	go func() {
-		for range mQuit.ClickedCh {
-			log.Info("quit button clicked, goodbye")
-			os.Exit(0)
-		}
-	}()
 }
 
 func onExit() {
@@ -196,9 +176,10 @@ func fetch() {
 
 		// create new MyCalendar from parsed
 		newCal := MyCalendar{
-			Title:  metaCal.Name,
-			Url:    metaCal.Url,
-			Events: make(map[string]*MyEvent),
+			Title:     metaCal.Name,
+			Url:       metaCal.Url,
+			Events:    make(map[string]*MyEvent),
+			ClientCmd: metaCal.OpenClientCmd,
 		}
 		myCals = append(myCals, &newCal)
 
@@ -220,7 +201,7 @@ func fetch() {
 
 			end, err := vEvent.GetEndAt()
 			if err != nil {
-				log.Warnf("failed to get ending time of event, setting new end at the end of the day")
+				//log.Warnf("failed to get ending time of event, setting new end at the end of the day")
 				end = time.Date(start.Year(), start.Month(), start.Day(), 23, 59, 0, 0, time.Local)
 			}
 
@@ -279,6 +260,7 @@ func fetch() {
 	log.Infof("fetched and parsed %d calendars.", len(myCals))
 	lastFetch = time.Now()
 	cals = myCals
+
 }
 
 func check(cals []*MyCalendar) (*MyAlarm, *MyEvent) {
@@ -399,6 +381,44 @@ func importFile(name string) {
 	}
 
 	log.Infof("file %s loaded.", name)
+
+	updateMenuButtons()
+}
+
+func updateMenuButtons() {
+	systray.ResetMenu()
+	mReload := systray.AddMenuItem("Reload config", "Reloads the config file from disk.")
+	mFetch := systray.AddMenuItem("Fetch now", "Fetches data from internet.")
+	for _, cal := range cals {
+		log.Trace("added menu item")
+		button := systray.AddMenuItem("Open client: "+cal.Title, "Opens the client with provided command.")
+		cal := cal // create independent variable, suggested by Idea
+		go func() {
+			for range button.ClickedCh {
+				log.Trace("opening client")
+				_ = exec.Command(strings.Split(cal.ClientCmd, " ")[0], strings.Split(cal.ClientCmd, " ")[1:]...).Run()
+			}
+		}()
+	}
+	mQuit := systray.AddMenuItem("Quit", "Quit program.")
+	log.Trace("menu icons loaded")
+
+	go func() {
+		for range mReload.ClickedCh {
+			importFile(dataFolderPath + configFileName)
+		}
+	}()
+	go func() {
+		for range mFetch.ClickedCh {
+			interruptCh <- struct{}{}
+		}
+	}()
+	go func() {
+		for range mQuit.ClickedCh {
+			log.Info("quit button clicked, goodbye")
+			os.Exit(0)
+		}
+	}()
 }
 
 func formatApproxDuration(dur time.Duration) string {
