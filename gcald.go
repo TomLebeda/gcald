@@ -104,7 +104,7 @@ func main() {
 }
 
 func onReady() {
-	icon, err := os.ReadFile("systray_icon.png")
+	icon, err := os.ReadFile("systray_icon.ico")
 	if err != nil {
 		log.Printf("Failed to load systray icon: %s\n", err.Error())
 	} else {
@@ -114,6 +114,7 @@ func onReady() {
 	mReload := systray.AddMenuItem("Reload config", "Reloads the config file from disk.")
 	mFetch := systray.AddMenuItem("Fetch now", "Fetches data from internet.")
 	mOpen := systray.AddMenuItem("Open client", "Opens calendar in default browser.")
+	mQuit := systray.AddMenuItem("Quit", "Quit program.")
 	go func() {
 		for range mReload.ClickedCh {
 			importFile(configFileName)
@@ -127,6 +128,11 @@ func onReady() {
 	go func() {
 		for range mFetch.ClickedCh {
 			interruptCh <- struct{}{}
+		}
+	}()
+	go func() {
+		for range mQuit.ClickedCh {
+			os.Exit(0)
 		}
 	}()
 }
