@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"fyne.io/systray"
 	ical "github.com/arran4/golang-ical"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +67,7 @@ var (
 	cals      []*MyCalendar
 )
 
-const (
+var (
 	configFileName = "gcald_import.json"
 )
 
@@ -76,6 +78,8 @@ func main() {
 	var nearestAlarm *MyAlarm
 	var nearestEvent *MyEvent
 	forceFetch := false
+	flag.StringVar(&configFileName, "i", "gcald_import.json", "path to the json file with input data")
+	flag.Parse()
 	importFile(configFileName)
 	fetch()
 	for {
@@ -104,7 +108,13 @@ func main() {
 }
 
 func onReady() {
-	icon, err := os.ReadFile("systray_icon.ico")
+	var icon []byte
+	var err error
+	if runtime.GOOS == "windows" {
+		icon, err = os.ReadFile("systray_icon.ico")
+	} else {
+		icon, err = os.ReadFile("systray_icon.png")
+	}
 	if err != nil {
 		log.Printf("Failed to load systray icon: %s\n", err.Error())
 	} else {
@@ -183,13 +193,21 @@ func fetch() {
 		for _, vEvent := range cal.Events() {
 			end, err := vEvent.GetEndAt()
 			if err != nil {
-				log.Printf("Failed to get ending time of event %s, error: %s\n", vEvent.Id(), err.Error())
-				continue
+				vEvent.GetProperty("DTEND").ICalParameters = make(map[string][]string)
+				end, err = vEvent.GetEndAt()
+				if err != nil {
+					log.Printf("Failed to get ending time of event %s, error: %s\n", vEvent.Id(), err.Error())
+					continue
+				}
 			}
 			start, err := vEvent.GetStartAt()
 			if err != nil {
-				log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
-				continue
+				vEvent.GetProperty("DTSTART").ICalParameters = make(map[string][]string)
+				start, err = vEvent.GetStartAt()
+				if err != nil {
+					log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
+					continue
+				}
 			}
 
 			// create new MyEvent
