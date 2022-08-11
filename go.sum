@@ -1,5 +1,7 @@
 fyne.io/systray v1.10.0 h1:Yr1D9Lxeiw3+vSuZWPlaHC8BMjIHZXJKkek706AfYQk=
 fyne.io/systray v1.10.0/go.mod h1:oM2AQqGJ1AMo4nNqZFYU8xYygSBZkW2hmdJ7n4yjedE=
+github.com/TomLebeda/go_quickLogger v0.2.0 h1:bdkx7htTMucJLpGvfrhF98/KqGhJd0wVXZDCiB/xCO8=
+github.com/TomLebeda/go_quickLogger v0.2.0/go.mod h1:yd4bn9GX4hR8FbALDAONt5R1dq+ZzAIL0D+N/Pam18A=
 github.com/arran4/golang-ical v0.0.0-20220517104411-fd89fefb0182 h1:mUsKridvWp4dgfkO/QWtgGwuLtZYpjKgsm15JRRik3o=
 github.com/arran4/golang-ical v0.0.0-20220517104411-fd89fefb0182/go.mod h1:BSTTrYHuM12oAL8jDdcmPdw02SBThKYWNFHQlvEG6b0=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

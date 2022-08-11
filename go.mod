@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	fyne.io/systray v1.10.0
+	github.com/TomLebeda/go_quickLogger v0.2.0
 	github.com/arran4/golang-ical v0.0.0-20220517104411-fd89fefb0182
 	github.com/gen2brain/beeep v0.0.0-20220518085355-d7852edf42fc
 )

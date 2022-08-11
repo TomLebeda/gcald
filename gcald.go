@@ -6,10 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"fyne.io/systray"
+	log "github.com/TomLebeda/go_quickLogger"
 	ical "github.com/arran4/golang-ical"
 	"github.com/gen2brain/beeep"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -74,12 +74,17 @@ var (
 var interruptCh = make(chan struct{})
 
 func main() {
+	flag.StringVar(&configFileName, "i", "gcald_import.json", "path to the json file with input data")
+	flag.BoolVar(&log.Tracing, "v", false, "verbose output")
+	flag.Parse()
+	log.Trace("started")
+
 	go systray.Run(onReady, onExit)
+	log.Trace("systray setup finished")
+
 	var nearestAlarm *MyAlarm
 	var nearestEvent *MyEvent
 	forceFetch := false
-	flag.StringVar(&configFileName, "i", "gcald_import.json", "path to the json file with input data")
-	flag.Parse()
 	importFile(configFileName)
 	fetch()
 	for {
@@ -116,15 +121,18 @@ func onReady() {
 		icon, err = os.ReadFile("systray_icon.png")
 	}
 	if err != nil {
-		log.Printf("Failed to load systray icon: %s\n", err.Error())
+		log.Fatalf("failed to load systray icon: %s", err.Error())
 	} else {
 		systray.SetIcon(icon)
+		log.Trace("systray icon loaded")
 	}
 	systray.SetTitle("gcald")
 	mReload := systray.AddMenuItem("Reload config", "Reloads the config file from disk.")
 	mFetch := systray.AddMenuItem("Fetch now", "Fetches data from internet.")
 	mOpen := systray.AddMenuItem("Open client", "Opens calendar in default browser.")
 	mQuit := systray.AddMenuItem("Quit", "Quit program.")
+	log.Trace("menu icons loaded")
+
 	go func() {
 		for range mReload.ClickedCh {
 			importFile(configFileName)
@@ -132,6 +140,7 @@ func onReady() {
 	}()
 	go func() {
 		for range mOpen.ClickedCh {
+			log.Trace("opening client")
 			_ = exec.Command(strings.Split(config.OpenClientCmd, " ")[0], strings.Split(config.OpenClientCmd, " ")[1:]...).Run()
 		}
 	}()
@@ -142,12 +151,14 @@ func onReady() {
 	}()
 	go func() {
 		for range mQuit.ClickedCh {
+			log.Info("quit button clicked, goodbye")
 			os.Exit(0)
 		}
 	}()
 }
 
 func onExit() {
+	log.Trace("quitting systray")
 	systray.Quit()
 }
 
@@ -156,6 +167,7 @@ func getAlarmTime(alarm ical.VAlarm, event ical.VEvent) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, errors.New("failed to get start time:" + err.Error())
 	}
+
 	// parse the alarm time
 	alarmOffset, err := parseIcalDuration(alarm.GetProperty(ical.ComponentPropertyTrigger).Value)
 	if err != nil {
@@ -165,19 +177,20 @@ func getAlarmTime(alarm ical.VAlarm, event ical.VEvent) (time.Time, error) {
 }
 
 func fetch() {
+	log.Info("fetching calendars")
 	myCals := make([]*MyCalendar, 0)
 	for _, metaCal := range config.CalendarsMetaData {
 		// fetch the data from internet
 		ics, err := http.Get(metaCal.Url)
 		if err != nil {
-			log.Printf("Failed to get ics file from calendar %s, error: %s\n", metaCal.Name, err.Error())
+			log.Errorf("failed to get ics file from calendar %s, error: %s", metaCal.Name, err.Error())
 			continue
 		}
 
 		// parse the ical data
 		cal, err := ical.ParseCalendar(ics.Body)
 		if err != nil {
-			log.Printf("Failed to parse calendar %s, error: %s\n", metaCal.Name, err.Error())
+			log.Errorf("failed to parse calendar %s, error: %s", metaCal.Name, err.Error())
 			continue
 		}
 
@@ -197,22 +210,17 @@ func fetch() {
 					vEvent.GetProperty("DTSTART").ICalParameters = make(map[string][]string)
 					start, err = vEvent.GetStartAt()
 					if err != nil {
-						log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
+						log.Warnf("failed to get starting time of event %s, error: %s", vEvent.Id(), err.Error())
 						continue
 					}
 				} else {
-					log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
+					log.Warnf("failed to get starting time of event %s, error: %s", vEvent.Id(), err.Error())
 				}
 			}
 
 			end, err := vEvent.GetEndAt()
 			if err != nil {
-				//vEvent.GetProperty("DTEND").ICalParameters = make(map[string][]string)
-				//end, err = vEvent.GetEndAt()
-				//if err != nil {
-				//	log.Printf("Failed to get ending time of event %s, error: %s\n", vEvent.Id(), err.Error())
-				//	continue
-				//}
+				log.Warnf("failed to get ending time of event, setting new end at the end of the day")
 				end = time.Date(start.Year(), start.Month(), start.Day(), 23, 59, 0, 0, time.Local)
 			}
 
@@ -234,7 +242,7 @@ func fetch() {
 				for _, vAlarm := range vEvent.Alarms() {
 					alarmTime, err := getAlarmTime(*vAlarm, *vEvent)
 					if err != nil {
-						log.Printf("Failed to get alarm time, error: %s\n", err.Error())
+						log.Errorf("failed to get alarm time, error: %s", err.Error())
 						continue
 					}
 					newAlarm := MyAlarm{
@@ -255,7 +263,7 @@ func fetch() {
 					for _, durationString := range durationStrings {
 						dur, err := time.ParseDuration(durationString)
 						if err != nil {
-							log.Printf("Failed to parse %s into duration (from config file), error: %s\n", durationString, err.Error())
+							log.Errorf("failed to parse %s into duration (from config file), error: %s", durationString, err.Error())
 							continue
 						}
 						newAlarm := MyAlarm{
@@ -268,7 +276,7 @@ func fetch() {
 			}
 		}
 	}
-	log.Printf("Fetched and parsed %d calendars.\n", len(myCals))
+	log.Infof("fetched and parsed %d calendars.", len(myCals))
 	lastFetch = time.Now()
 	cals = myCals
 }
@@ -336,6 +344,7 @@ func updateTooltip(event *MyEvent) {
 }
 
 func notify(alarm *MyAlarm) {
+	log.Info("creating notification for alarm", alarm.Event.Title)
 	if alarm.Event == nil {
 		// this is dummy alarm, ignore it
 		return
@@ -360,7 +369,7 @@ func notify(alarm *MyAlarm) {
 	}
 	err := beeep.Notify(alarm.Event.Title, msg, "calendar_icon.svg")
 	if err != nil {
-		log.Printf("Failed to display notification for event %s, error: %s", alarm.Event.Title, err.Error())
+		log.Infof("failed to display notification for event %s, error: %s", alarm.Event.Title, err.Error())
 	}
 	alarm.Used = true
 }
@@ -369,27 +378,27 @@ func importFile(name string) {
 	// load-import file with input data
 	f, err := ioutil.ReadFile(name)
 	if err != nil {
-		log.Fatalln("Failed to read import file:", err)
+		log.Fatal("failed to read import file:", err)
 	}
 
 	// parse imported file
 	err = json.Unmarshal(f, &config)
 	if err != nil {
-		log.Println("Failed to unmarshall JSON:", err)
+		log.Error("failed to unmarshall JSON:", err)
 	}
 
 	// parse fetch period from config
 	config.FetchPeriod, err = time.ParseDuration(config.FetchPeriodRaw)
 	if err != nil {
-		log.Println("Failed to parse fetch period: ", err)
+		log.Error("failed to parse fetch period: ", err)
 		config.FetchPeriod = 30 * time.Minute
 	}
 
 	if config.ForceCheckPeriod > config.FetchPeriod {
-		log.Println("WARNING: fetch period is smaller than check period")
+		log.Warn("fetch period is smaller than check period")
 	}
 
-	log.Printf("File %s loaded.\n", name)
+	log.Infof("file %s loaded.", name)
 }
 
 func formatApproxDuration(dur time.Duration) string {
@@ -427,7 +436,7 @@ func parseIcalDuration(s string) (time.Duration, error) {
 		}
 		parsed, err := time.ParseDuration(durToParse)
 		if err != nil {
-			log.Println("Failed to parse string", durToParse, "into duration")
+			log.Error("failed to parse string", durToParse, "into duration")
 			continue
 		}
 		dur += parsed
