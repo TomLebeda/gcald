@@ -191,23 +191,29 @@ func fetch() {
 
 		// process all events
 		for _, vEvent := range cal.Events() {
-			end, err := vEvent.GetEndAt()
-			if err != nil {
-				vEvent.GetProperty("DTEND").ICalParameters = make(map[string][]string)
-				end, err = vEvent.GetEndAt()
-				if err != nil {
-					log.Printf("Failed to get ending time of event %s, error: %s\n", vEvent.Id(), err.Error())
-					continue
-				}
-			}
 			start, err := vEvent.GetStartAt()
 			if err != nil {
-				vEvent.GetProperty("DTSTART").ICalParameters = make(map[string][]string)
-				start, err = vEvent.GetStartAt()
-				if err != nil {
+				if strings.HasPrefix(err.Error(), "unknown time zone") {
+					vEvent.GetProperty("DTSTART").ICalParameters = make(map[string][]string)
+					start, err = vEvent.GetStartAt()
+					if err != nil {
+						log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
+						continue
+					}
+				} else {
 					log.Printf("Failed to get starting time of event %s, error: %s\n", vEvent.Id(), err.Error())
-					continue
 				}
+			}
+
+			end, err := vEvent.GetEndAt()
+			if err != nil {
+				//vEvent.GetProperty("DTEND").ICalParameters = make(map[string][]string)
+				//end, err = vEvent.GetEndAt()
+				//if err != nil {
+				//	log.Printf("Failed to get ending time of event %s, error: %s\n", vEvent.Id(), err.Error())
+				//	continue
+				//}
+				end = time.Date(start.Year(), start.Month(), start.Day(), 23, 59, 0, 0, time.Local)
 			}
 
 			// create new MyEvent
