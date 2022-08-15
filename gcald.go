@@ -90,6 +90,9 @@ func main() {
 	fetch()
 
 	go systray.Run(onReady, onExit)
+
+	<-sysReady // before manipulate wich systray wait for initializing
+
 	updateMenuButtons()
 	for {
 		if time.Now().YearDay() != cacheDay {
@@ -135,6 +138,7 @@ func onReady() {
 		log.Trace("systray icon loaded")
 	}
 	systray.SetTitle("gcald")
+	sysReady <- true
 }
 
 func onExit() {
@@ -260,7 +264,6 @@ func fetch() {
 	log.Infof("fetched and parsed %d calendars.", len(myCals))
 	lastFetch = time.Now()
 	cals = myCals
-
 }
 
 func check(cals []*MyCalendar) (*MyAlarm, *MyEvent) {
@@ -323,6 +326,9 @@ func updateTooltip(event *MyEvent) {
 	}
 	tooltip := fmt.Sprintf("next: %s\n%s", event.Title, msg)
 	systray.SetTitle(tooltip)
+	if runtime.GOOS == "windows" {
+		systray.SetTooltip(tooltip)
+	}
 }
 
 func notify(alarm *MyAlarm) {
@@ -382,7 +388,7 @@ func importFile(name string) {
 
 	log.Infof("file %s loaded.", name)
 
-	updateMenuButtons()
+	//updateMenuButtons()
 }
 
 func updateMenuButtons() {
