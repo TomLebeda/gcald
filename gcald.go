@@ -9,6 +9,7 @@ import (
 	log "github.com/TomLebeda/go_quickLogger"
 	ical "github.com/arran4/golang-ical"
 	"github.com/gen2brain/beeep"
+	"github.com/teambition/rrule-go"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -209,61 +210,84 @@ func fetch() {
 				end = time.Date(start.Year(), start.Month(), start.Day(), 23, 59, 0, 0, time.Local)
 			}
 
+			// for periodic events
+			rruleVal := ""
+			property := vEvent.GetProperty(ical.ComponentPropertyRrule)
+			if property != nil {
+				rruleVal = property.Value
+				// find the nearest periodic date of start and end
+				rule, err := rrule.StrToRRule(rruleVal)
+				if err != nil {
+					log.Warnf("failed to get periodic rule of event %s, error: %s", vEvent.Id(), err.Error())
+					continue
+				}
+				rule.DTStart(start)
+				start = rule.After(time.Now(), true)
+
+				rule.DTStart(end)
+				end = rule.After(time.Now(), true)
+			}
+
 			// create new MyEvent
 			if time.Now().Before(end) {
-				newEvent := MyEvent{
-					Title:   vEvent.GetProperty(ical.ComponentPropertySummary).Value,
-					Id:      vEvent.Id(),
-					Start:   start,
-					End:     end,
-					FullDay: start.Hour() == 0 && start.Minute() == 0 && end.Hour() == 0 && end.Minute() == 0 && end.Sub(start) == 24*time.Hour,
-					Alarms:  make([]*MyAlarm, 0),
-				}
+				newEvent := CreateEvent(vEvent, start, end, metaCal)
 
 				// store it
 				newCal.Events[newEvent.Id] = &newEvent
-
-				// extract imported alarms
-				for _, vAlarm := range vEvent.Alarms() {
-					alarmTime, err := getAlarmTime(*vAlarm, *vEvent)
-					if err != nil {
-						log.Errorf("failed to get alarm time, error: %s", err.Error())
-						continue
-					}
-					newAlarm := MyAlarm{
-						Event:   &newEvent,
-						Trigger: alarmTime,
-					}
-					newEvent.Alarms = append(newEvent.Alarms, &newAlarm)
-				}
-
-				// add default alarms
-				if len(newEvent.Alarms) == 0 || config.ForceDefaultReminders {
-					var durationStrings []string
-					if newEvent.FullDay {
-						durationStrings = metaCal.FullDayNotifications
-					} else {
-						durationStrings = metaCal.Notifications
-					}
-					for _, durationString := range durationStrings {
-						dur, err := time.ParseDuration(durationString)
-						if err != nil {
-							log.Errorf("failed to parse %s into duration (from config file), error: %s", durationString, err.Error())
-							continue
-						}
-						newAlarm := MyAlarm{
-							Event:   &newEvent,
-							Trigger: newEvent.Start.Add(-dur),
-						}
-						newEvent.Alarms = append(newEvent.Alarms, &newAlarm)
-					}
-				}
 			}
 		}
 	}
 	log.Infof("fetched and parsed %d calendars.", len(myCals))
 	lastFetch = time.Now()
 	cals = myCals
+}
+
+func CreateEvent(vEvent *ical.VEvent, start time.Time, end time.Time, metaCal CalendarMetaData) MyEvent {
+	newEvent := MyEvent{
+		Title:   vEvent.GetProperty(ical.ComponentPropertySummary).Value,
+		Id:      vEvent.Id(),
+		Start:   start,
+		End:     end,
+		FullDay: start.Hour() == 0 && start.Minute() == 0 && end.Hour() == 0 && end.Minute() == 0 && end.Sub(start) == 24*time.Hour,
+		Alarms:  make([]*MyAlarm, 0),
+	}
+
+	// extract imported alarms
+	for _, vAlarm := range vEvent.Alarms() {
+		alarmTime, err := getAlarmTime(*vAlarm, *vEvent)
+		if err != nil {
+			log.Errorf("failed to get alarm time, error: %s", err.Error())
+			continue
+		}
+		newAlarm := MyAlarm{
+			Event:   &newEvent,
+			Trigger: alarmTime,
+		}
+		newEvent.Alarms = append(newEvent.Alarms, &newAlarm)
+	}
+
+	// add default alarms
+	if len(newEvent.Alarms) == 0 || config.ForceDefaultReminders {
+		var durationStrings []string
+		if newEvent.FullDay {
+			durationStrings = metaCal.FullDayNotifications
+		} else {
+			durationStrings = metaCal.Notifications
+		}
+		for _, durationString := range durationStrings {
+			dur, err := time.ParseDuration(durationString)
+			if err != nil {
+				log.Errorf("failed to parse %s into duration (from config file), error: %s", durationString, err.Error())
+				continue
+			}
+			newAlarm := MyAlarm{
+				Event:   &newEvent,
+				Trigger: newEvent.Start.Add(-dur),
+			}
+			newEvent.Alarms = append(newEvent.Alarms, &newAlarm)
+		}
+	}
+	return newEvent
 }
 
 func check(cals []*MyCalendar) (*MyAlarm, *MyEvent) {
@@ -325,6 +349,7 @@ func updateTooltip(event *MyEvent) {
 		)
 	}
 	tooltip := fmt.Sprintf("next: %s\n%s", event.Title, msg)
+	log.Debug("nearest event: ", tooltip)
 	systray.SetTitle(tooltip)
 	if runtime.GOOS == "windows" {
 		systray.SetTooltip(tooltip)
